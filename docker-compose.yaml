@@ -5,25 +5,52 @@ services:
    image: nginx:1.13
    restart: always
    ports:
-   - 80:80
-   - 443:443
+    - 80:80
+    - 443:443
    volumes:
-   - ./nginx/conf.d:/etc/nginx/conf.d
+    - ./nginx/conf.d:/etc/nginx/conf.d
    depends_on:
-   - app
+    - app
+    - appb
+    - appchat
 
   mongodb:
-    container_name: some-mongo
+    container_name: mongodb
     image: mongo:3.6
-    environment:
-      - MONGO_DATA_DIR=/data/db
-      - MONGO_LOG_DIR=/dev/null
-    volumes:
-      - ./data/db:/data/db
     ports:
-        - 27017:27017
-    command: mongod --smallfiles --logpath=/dev/null # --quiet
-
+      - 27017:27017
+    command: mongod
+  wildfly:
+    container_name: wildfly
+    image: jboss/wildfly
+    ports:
+      - 8070:8080
+    expose:
+      - "8070"
+  appchat:
+    restart: always
+    build: ./spring-boot-websocket-chat-demo
+    working_dir: /spring-boot-websocket-chat-demo
+    volumes:
+      - ./spring-boot-websocket-chat-demo/target:/spring-boot-websocket-chat-demo
+      - ~/.m2:/root/.m2
+    ports:
+      - 4000:8080
+    expose:
+      - "4000"
+    command: mvn clean spring-boot:run  
+  appb:
+    restart: always
+    build: ./dockersample
+    working_dir: /dockersample
+    volumes:
+      - ./dockersample/target:/dockersample
+      - ~/.m2:/root/.m2
+    ports:
+      - 8020:8080
+    expose:
+      - "8020"
+    command: java -jar dockersample.jar    
   app:
     restart: always
     build: ./app
@@ -31,8 +58,10 @@ services:
     volumes:
       - ./app:/app
       - ~/.m2:/root/.m2
+    ports:
+      - 8050:8080
     expose:
-      - "8080"
+      - "8050"
     command: mvn clean spring-boot:run
     depends_on:
       - mongodb
